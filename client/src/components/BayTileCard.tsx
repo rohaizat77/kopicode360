@@ -1,8 +1,8 @@
-import { IconAlertTriangle, IconCar, IconLock, IconStarFilled } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCar, IconChargingPile, IconLock, IconStarFilled } from '@tabler/icons-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { matchesFilter, STATUS_META, visualOf } from '../lib/status';
 import { useParkingStore } from '../store/useParkingStore';
-import { HERO_BAY } from '../types';
+import { HERO_BAY, PERSONAS } from '../types';
 
 interface Props {
   id: string;
@@ -34,32 +34,49 @@ export const BayTileCard = memo(function BayTileCard({ id, onSelectBay }: Props)
   }, [status, sensor]);
 
   if (!bay) return <div className="sp-tile sp-tile--empty" />;
+  const persona = useParkingStore((s) => PERSONAS[s.activePersona]);
   const visual = visualOf(bay);
   const meta = STATUS_META[visual];
   const occupied = bay.iotSensor.state !== 'EMPTY';
   const plate = bay.currentOccupant?.plate;
+  const isMyParkedCar = occupied && (
+    bay.currentOccupant?.email === persona.email ||
+    (!!persona.plate && bay.currentOccupant?.plate === persona.plate)
+  );
+  const isEvBay = id.endsWith('027');
 
   return (
     <button
       type="button"
       className="sp-tile"
-      data-visual={visual}
+      data-visual={isMyParkedCar ? 'MY_PARKED' : visual}
+      data-my-parked={isMyParkedCar || undefined}
       data-dimmed={dimmed || undefined}
       data-pulse={pulse || undefined}
-      data-nearest={nearest || undefined}
+      data-nearest={(!isMyParkedCar && nearest) || undefined}
       data-hero={id === HERO_BAY || undefined}
       onClick={() => onSelectBay(id)}
-      aria-label={`Bay ${id}, ${meta.label}${plate ? `, plate ${plate}` : ''}, ${bay.liftDistanceM} metres from the lift${nearest ? ', nearest free bay to the lift' : ''}`}
-      title={`${id} · ${meta.label} · ${bay.liftDistanceM} m to the lift${nearest ? ' · nearest free bay to the lift' : ''}`}
+      aria-label={`Bay ${id}, ${isMyParkedCar ? 'Your parked vehicle' : meta.label}${plate ? `, plate ${plate}` : ''}, ${bay.liftDistanceM} metres from the lift${nearest ? ', nearest free bay to the lift' : ''}`}
+      title={`${id} · ${isMyParkedCar ? 'Your parked vehicle' : meta.label} · ${bay.liftDistanceM} m to the lift${nearest ? ' · nearest free bay to the lift' : ''}`}
     >
       <span className="sp-tile__top">
         <span className="sp-tile__num">{id.slice(3)}</span>
         <span className="sp-led" data-sensor={bay.iotSensor.state} aria-hidden />
       </span>
       <span className="sp-tile__icon" aria-hidden>
-        {visual === 'UNAUTHORIZED_ALERT' ? <IconAlertTriangle size={18} /> : occupied ? <IconCar size={18} /> : visual === 'RESERVED_LOCKED' ? <IconLock size={16} /> : <span className="sp-tile__p">P</span>}
+        {visual === 'UNAUTHORIZED_ALERT' ? (
+          <IconAlertTriangle size={18} />
+        ) : isEvBay ? (
+          <IconChargingPile size={18} />
+        ) : occupied ? (
+          <IconCar size={18} />
+        ) : visual === 'RESERVED_LOCKED' ? (
+          <IconLock size={16} />
+        ) : (
+          <span className="sp-tile__p">P</span>
+        )}
       </span>
-      <span className="sp-tile__plate">{plate ?? meta.short}</span>
+      <span className="sp-tile__plate">{isMyParkedCar ? (plate ? `YOU · ${plate}` : 'YOU') : (plate ?? meta.short)}</span>
       {id === HERO_BAY && <IconStarFilled className="sp-tile__star" size={10} aria-hidden />}
     </button>
   );

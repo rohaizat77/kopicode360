@@ -412,7 +412,7 @@ export class ParkingService {
     const today = this.today();
     if (ev.endDate < today) return null;
     const bay = this.findBayOwnedBy(ev.ownerEmail);
-    if (!bay || bay.releaseInfo || (bay.status !== 'RESERVED_LOCKED' && bay.status !== 'OCCUPIED_OWNER')) return null;
+    if (!bay || bay.releaseInfo) return null;
     const startDate = ev.startDate < today ? today : ev.startDate;
     const days = Math.round((Date.parse(ev.endDate) - Date.parse(startDate)) / 86_400_000) + 1;
     return { eventId: ev.id, ownerEmail: ev.ownerEmail, ownerName: bay.ownerName, bayId: bay.id, title: ev.title, startDate, endDate: ev.endDate, days, reason: ev.kind };

@@ -1,10 +1,10 @@
-import { Alert, Badge, Box, Button, Divider, Drawer, Group, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Badge, Box, Button, Divider, Drawer, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconAlertTriangle, IconCarOff, IconCarGarage, IconLink, IconLockOpen, IconLock, IconRouter } from '@tabler/icons-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import { AUTH_LABEL, fmtDate, fmtTime, REASON_LABEL, run, SENSOR_LABEL, STATUS_META, timeAgo, visualOf } from '../lib/status';
+import { IconAlertTriangle, IconCarOff, IconCarGarage, IconLockOpen, IconLock, IconRouter } from '@tabler/icons-react';
+import { type ReactNode } from 'react';
+import { fmtDate, fmtTime, REASON_LABEL, run, SENSOR_LABEL, STATUS_META, timeAgo, visualOf } from '../lib/status';
 import { useParkingStore } from '../store/useParkingStore';
-import { PERSONAS, type AuthMethod } from '../types';
+import { PERSONAS } from '../types';
 
 function Field({ label, children, secondary }: { label: string; children: ReactNode; secondary?: boolean }) {
   return (
@@ -29,24 +29,24 @@ export function BayDetailDrawer() {
   const openRelease = useParkingStore((s) => s.openRelease);
   const post = useParkingStore((s) => s.post);
   const isMobile = useMediaQuery('(max-width: 48em)');
-  // Transient simulator inputs stay local to the drawer.
-  const [authMethod, setAuthMethod] = useState<AuthMethod>('ACCESS_CARD_NFC');
-  const [plate, setPlate] = useState('');
-
-  useEffect(() => {
-    setPlate(persona.plate ?? '');
-  }, [persona.plate, bayId]);
 
   const body = () => {
     if (!bay) return null;
     const visual = visualOf(bay);
     const meta = STATUS_META[visual];
     const sensor = bay.iotSensor;
-    const canManage = persona.key === 'management' || bay.ownerEmail === persona.email;
+    const isAdmin = persona.key === 'management';
+    const canManage = isAdmin || bay.ownerEmail === persona.email;
     const releaseActive = !!bay.releaseInfo && bay.releaseInfo.startDate <= today && today <= bay.releaseInfo.endDate;
     const lockedBase = bay.tier === 'ALLOCATED' && !releaseActive;
     const iot = (payload: Record<string, unknown>, ok: string) => run(() => post(`/api/parking/bays/${bay.id}/iot-event`, payload), ok);
-    const who = persona.key === 'management' ? 'a simulated staff vehicle' : persona.name;
+    const who = isAdmin ? 'a simulated staff vehicle' : persona.name;
+
+    const isOwner = isAdmin || (bay.tier === 'ALLOCATED' && bay.ownerEmail === persona.email);
+    const isOccupantMe =
+      bay.currentOccupant?.email === persona.email ||
+      (!!persona.plate && bay.currentOccupant?.plate === persona.plate);
+    const canSeeOccupant = isAdmin || isOccupantMe;
 
     return (
       <Stack gap="md">
@@ -64,42 +64,56 @@ export function BayDetailDrawer() {
 
         {bay.status === 'UNAUTHORIZED_ALERT' && (
           <Alert color="orange" icon={<IconAlertTriangle size={18} />} title="Unauthorized vehicle">
-            A vehicle is on this locked bay without the owner's credentials. Facilities and {bay.ownerName} have been alerted.
+            A vehicle is on this locked bay without the owner's credentials. Facilities and {isOwner ? bay.ownerName : 'the bay owner'} have been alerted.
           </Alert>
         )}
 
-        <SimpleGrid cols={2} spacing="sm">
-          <Field label="Owner">{bay.ownerName ?? 'None · open to all'}</Field>
-          <Field label="Department">{bay.ownerDepartment ?? '—'}</Field>
-          <Field label="Owner plate">{bay.ownerPlate ?? '—'}</Field>
-          <Field label="Walk to lift">{bay.liftDistanceM} m</Field>
-          <Field label="30-day use">{bay.usage ? `${bay.usage.occupancy30dPct}% occupied · ${bay.usage.releases30d} release${bay.usage.releases30d === 1 ? '' : 's'}` : '—'}</Field>
-        </SimpleGrid>
+        {bay.tier === 'ALLOCATED' && (
+          <>
+            <SimpleGrid cols={2} spacing="sm">
+              <Field label="Owner">{isOwner ? (bay.ownerName ?? 'None · open to all') : '—'}</Field>
+              <Field label="Department">{isOwner ? (bay.ownerDepartment ?? '—') : '—'}</Field>
+              <Field label="Owner plate">{isOwner ? (bay.ownerPlate ?? '—') : '—'}</Field>
+              <Field label="Walk to lift">{bay.liftDistanceM} m</Field>
+              <Field label="30-day use">
+                {isOwner && bay.usage
+                  ? `${bay.usage.occupancy30dPct}% occupied · ${bay.usage.releases30d} release${bay.usage.releases30d === 1 ? '' : 's'}`
+                  : '—'}
+              </Field>
+            </SimpleGrid>
 
-        <Divider label="Release window" labelPosition="left" />
-        {bay.releaseInfo ? (
-          <Box>
-            <Text size="sm" fw={600}>
-              {fmtDate(bay.releaseInfo.startDate)} to {fmtDate(bay.releaseInfo.endDate)} · {REASON_LABEL[bay.releaseInfo.reason]}
-            </Text>
-            <Text size="xs" c="dimmed">
-              Released {timeAgo(bay.releaseInfo.releasedAt)}
-              {bay.releaseInfo.notes ? ` · “${bay.releaseInfo.notes}”` : ''}
-            </Text>
-          </Box>
-        ) : (
-          <Text size="sm" c="dimmed">
-            {bay.tier === 'ALLOCATED' ? 'Not released. Only the owner may park here.' : 'Not applicable. This bay is always first come, first served.'}
-          </Text>
+            <Divider label="Release window" labelPosition="left" />
+            {bay.releaseInfo ? (
+              <Box>
+                <Text size="sm" fw={600}>
+                  {fmtDate(bay.releaseInfo.startDate)} to {fmtDate(bay.releaseInfo.endDate)} · {REASON_LABEL[bay.releaseInfo.reason]}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Released {timeAgo(bay.releaseInfo.releasedAt)}
+                  {bay.releaseInfo.notes ? ` · “${bay.releaseInfo.notes}”` : ''}
+                </Text>
+              </Box>
+            ) : (
+              <Text size="sm" c="dimmed">
+                Not released. Only the owner may park here.
+              </Text>
+            )}
+          </>
         )}
 
-        <Divider label="Current occupant" labelPosition="left" />
+        {bay.tier === 'FLEX_POOL' && (
+          <SimpleGrid cols={2} spacing="sm">
+            <Field label="Parking Type">Open Free Parking (FCFS)</Field>
+            <Field label="Walk to lift">{bay.liftDistanceM} m</Field>
+          </SimpleGrid>
+        )}
+
+        <Divider label={isOccupantMe && !isAdmin ? 'Your parking session' : 'Current occupant'} labelPosition="left" />
         {bay.currentOccupant ? (
           <SimpleGrid cols={2} spacing="sm">
-            <Field label="Driver">{bay.currentOccupant.name}</Field>
-            <Field label="Plate">{bay.currentOccupant.plate}</Field>
-            <Field label="Linked via">{AUTH_LABEL[bay.currentOccupant.authMethod]}</Field>
-            <Field label="Parked at">{fmtTime(bay.currentOccupant.parkedAt)}</Field>
+            <Field label="Driver">{canSeeOccupant ? bay.currentOccupant.name : '—'}</Field>
+            <Field label="Plate">{canSeeOccupant ? bay.currentOccupant.plate : '—'}</Field>
+            <Field label="Parked at">{canSeeOccupant ? fmtTime(bay.currentOccupant.parkedAt) : '—'}</Field>
           </SimpleGrid>
         ) : (
           <Text size="sm" c="dimmed">
@@ -107,35 +121,39 @@ export function BayDetailDrawer() {
           </Text>
         )}
 
-        <Divider
-          label={
-            <Group gap={6}>
-              <IconRouter size={14} /> LoRaWAN + BLE floor puck
-            </Group>
-          }
-          labelPosition="left"
-        />
-        <SimpleGrid cols={2} spacing="sm">
-          <Field label="Sensor state">
-            <Group gap={6} wrap="nowrap">
-              <span className="sp-led sp-led--inline" data-sensor={sensor.state} />
-              {SENSOR_LABEL[sensor.state]}
-            </Group>
-          </Field>
-          <Field label="Battery">{sensor.batteryPct}%</Field>
-          <Field label="Last heartbeat">{timeAgo(sensor.lastHeartbeat)}</Field>
-          <Field label="Signal RSSI" secondary>
-            {sensor.rssiDbm} dBm
-          </Field>
-          <Field label="Sensor ID" secondary>
-            {sensor.sensorId}
-          </Field>
-        </SimpleGrid>
+        {isAdmin && (
+          <>
+            <Divider
+              label={
+                <Group gap={6}>
+                  <IconRouter size={14} /> LoRaWAN + BLE floor puck
+                </Group>
+              }
+              labelPosition="left"
+            />
+            <SimpleGrid cols={2} spacing="sm">
+              <Field label="Sensor state">
+                <Group gap={6} wrap="nowrap">
+                  <span className="sp-led sp-led--inline" data-sensor={sensor.state} />
+                  {SENSOR_LABEL[sensor.state]}
+                </Group>
+              </Field>
+              <Field label="Battery">{sensor.batteryPct}%</Field>
+              <Field label="Last heartbeat">{timeAgo(sensor.lastHeartbeat)}</Field>
+              <Field label="Signal RSSI" secondary>
+                {sensor.rssiDbm} dBm
+              </Field>
+              <Field label="Sensor ID" secondary>
+                {sensor.sensorId}
+              </Field>
+            </SimpleGrid>
+          </>
+        )}
 
         <Divider label="Actions" labelPosition="left" />
         <Stack gap="xs">
           {bay.tier === 'ALLOCATED' && canManage && !bay.releaseInfo && (bay.status === 'RESERVED_LOCKED' || bay.status === 'OCCUPIED_OWNER') && (
-            <Button color="teal" leftSection={<IconLockOpen size={18} />} onClick={() => openRelease(bay.id)} disabled={busy}>
+            <Button color="amber" leftSection={<IconLockOpen size={18} />} onClick={() => openRelease(bay.id)} disabled={busy}>
               Release bay {bay.id}
             </Button>
           )}
@@ -152,56 +170,56 @@ export function BayDetailDrawer() {
           )}
           {bay.tier === 'ALLOCATED' && !canManage && !bay.releaseInfo && (
             <Text size="xs" c="dimmed">
-              Only {bay.ownerName} or Facilities can release this bay.
+              Only {isOwner ? bay.ownerName : 'the assigned owner'} or Facilities can release this bay.
             </Text>
           )}
         </Stack>
 
-        <Box className="sp-sim">
-          <Text size="xs" fw={700} tt="uppercase" c="dimmed" mb={6}>
-            IoT simulator · acting as {who}
-          </Text>
-          {sensor.state !== 'OCCUPIED_VERIFIED' && sensor.state !== 'OCCUPIED_UNAUTHORIZED' && (
-            <Group grow align="flex-end" mb="xs">
-              <Select
-                label="Identity link method"
-                data={Object.entries(AUTH_LABEL).map(([value, label]) => ({ value, label }))}
-                value={authMethod}
-                onChange={(v) => v && setAuthMethod(v as AuthMethod)}
-                allowDeselect={false}
-                comboboxProps={{ withinPortal: true }}
-              />
-              <TextInput label="Vehicle plate" placeholder={persona.key === 'management' ? 'Auto' : undefined} value={plate} maxLength={12} onChange={(e) => setPlate(e.currentTarget.value.toUpperCase())} />
-            </Group>
-          )}
-          <Stack gap="xs">
-            {sensor.state === 'EMPTY' && (
-              <>
-                <Button variant="default" leftSection={<IconCarGarage size={18} />} disabled={busy} onClick={() => void iot({ type: 'VEHICLE_ARRIVED' }, `Floor puck detected a vehicle on ${bay.id}.`)}>
-                  Car pulls in (puck detects only)
+        {(sensor.state === 'EMPTY' || isOccupantMe || isAdmin) && (
+          <Box className="sp-sim">
+            <Text size="xs" fw={700} tt="uppercase" c="dimmed" mb={8}>
+              IoT simulator · acting as {who}
+            </Text>
+            <Stack gap="xs">
+              {sensor.state === 'EMPTY' && (
+                <Button
+                  color="amber"
+                  leftSection={<IconCarGarage size={18} />}
+                  disabled={busy}
+                  onClick={() =>
+                    void iot(
+                      { type: 'LINK_IDENTITY', authMethod: 'BLE_AUTO', plate: persona.plate || undefined },
+                      `Vehicle parked on ${bay.id} — automatically detected and verified.`,
+                    )
+                  }
+                >
+                  Car arrives & parks (auto-detected)
                 </Button>
-                <Button leftSection={<IconLink size={18} />} disabled={busy} onClick={() => void iot({ type: 'LINK_IDENTITY', authMethod, plate: plate || undefined }, `Vehicle arrived and identity link sent for ${bay.id}.`)}>
-                  Car pulls in + link identity
+              )}
+              {sensor.state !== 'EMPTY' && (isAdmin || isOccupantMe) && (
+                <Button
+                  variant="default"
+                  leftSection={<IconCarOff size={18} />}
+                  disabled={busy}
+                  onClick={() => void iot({ type: 'VEHICLE_DEPARTED' }, `${bay.id} auto-cleared. Vehicle departed.`)}
+                >
+                  Car leaves (auto move-out)
                 </Button>
-              </>
-            )}
-            {sensor.state === 'VEHICLE_DETECTED_PENDING_AUTH' && (
-              <Button leftSection={<IconLink size={18} />} disabled={busy} onClick={() => void iot({ type: 'LINK_IDENTITY', authMethod, plate: plate || undefined }, `Identity link sent for ${bay.id}.`)}>
-                Link identity to this bay
-              </Button>
-            )}
-            {sensor.state !== 'EMPTY' && (
-              <Button variant="default" leftSection={<IconCarOff size={18} />} disabled={busy} onClick={() => void iot({ type: 'VEHICLE_DEPARTED' }, `${bay.id} auto-cleared. No checkout needed.`)}>
-                Car leaves (auto move-out)
-              </Button>
-            )}
-            {lockedBase && (sensor.state === 'EMPTY' || sensor.state === 'VEHICLE_DETECTED_PENDING_AUTH') && (
-              <Button color="orange" variant="light" leftSection={<IconAlertTriangle size={18} />} disabled={busy} onClick={() => void iot({ type: 'AUTH_FAILED' }, `Unauthorized alert raised on ${bay.id}.`)}>
-                Simulate unauthorized car alert
-              </Button>
-            )}
-          </Stack>
-        </Box>
+              )}
+              {lockedBase && sensor.state === 'EMPTY' && (
+                <Button
+                  color="orange"
+                  variant="light"
+                  leftSection={<IconAlertTriangle size={18} />}
+                  disabled={busy}
+                  onClick={() => void iot({ type: 'AUTH_FAILED' }, `Unauthorized alert raised on ${bay.id}.`)}
+                >
+                  Simulate unauthorized car alert
+                </Button>
+              )}
+            </Stack>
+          </Box>
+        )}
       </Stack>
     );
   };

@@ -34,9 +34,12 @@ export function addDays(date: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** 70 bays: 35 per level. B4 is all allocated; on B5 bays 001-025 are designated and 026-035 are open FCFS. */
+/** 70 bays: 35 per level.
+ * Allocated owner bays: 006-010, 016-018, 024-026, 032-035.
+ * Open parking bays: 001-005, 011-015, 019-023, 027-031.
+ */
 export const BAYS_PER_LEVEL = 35;
-export const B5_DESIGNATED = 25;
+export const ALLOCATED_BAY_NUMS = new Set([6, 7, 8, 9, 10, 16, 17, 18, 24, 25, 26, 32, 33, 34, 35]);
 
 export function buildBaseline(today: string, nowIso: string): ParkingState {
   const rnd = mulberry32(20261112);
@@ -66,15 +69,36 @@ export function buildBaseline(today: string, nowIso: string): ParkingState {
 
   const ids: string[] = [];
   for (const level of ['B4', 'B5'] as const) for (let n = 1; n <= BAYS_PER_LEVEL; n++) ids.push(`${level}-${String(n).padStart(3, '0')}`);
-  const isAllocated = (id: string) => id.startsWith('B4') || Number(id.slice(3)) <= B5_DESIGNATED;
+  const isAllocated = (id: string) => ALLOCATED_BAY_NUMS.has(Number(id.slice(3)));
 
-  // 60 allocated bays: 13 unused (incl. hero bay), 3 released & open, 2 released & reallocated, 42 owner parked.
+  // Allocated bays (15 per level: 006-010, 016-018, 024-026, 032-035)
   const allocated = shuffle(ids.filter((id) => isAllocated(id) && id !== HERO_BAY));
   const statusOf = new Map<string, BayAllocationStatus>([[HERO_BAY, 'RESERVED_LOCKED']]);
-  allocated.forEach((id, i) => statusOf.set(id, i < 12 ? 'RESERVED_LOCKED' : i < 15 ? 'RELEASED_AVAILABLE' : i < 17 ? 'OCCUPIED_REALLOCATED' : 'OCCUPIED_OWNER'));
-  // 10 flex bays: 7 occupied, 3 available.
-  shuffle(ids.filter((id) => !isAllocated(id))).forEach((id, i) => statusOf.set(id, i < 7 ? 'OCCUPIED_FLEX' : 'FLEX_AVAILABLE'));
-  const chronicIdle = new Set(allocated.slice(0, 7));
+  allocated.forEach((id, i) =>
+    statusOf.set(
+      id,
+      i < 6
+        ? 'RESERVED_LOCKED'
+        : i < 9
+          ? 'RELEASED_AVAILABLE'
+          : i < 11
+            ? 'OCCUPIED_REALLOCATED'
+            : 'OCCUPIED_OWNER',
+    ),
+  );
+
+  // Flex bays (20 per level: 001-005, 011-015, 019-023, 027-031)
+  const flex = shuffle(ids.filter((id) => !isAllocated(id) && id !== 'B5-027'));
+  statusOf.set('B5-027', 'OCCUPIED_FLEX');
+  flex.forEach((id, i) => statusOf.set(id, i < 27 ? 'OCCUPIED_FLEX' : 'FLEX_AVAILABLE'));
+
+  // Ensure 009, 016, 022, 023 are explicitly occupied in dummy data
+  statusOf.set('B5-009', 'OCCUPIED_OWNER');
+  statusOf.set('B5-016', 'OCCUPIED_OWNER');
+  statusOf.set('B5-022', 'OCCUPIED_FLEX');
+  statusOf.set('B5-023', 'OCCUPIED_FLEX');
+
+  const chronicIdle = new Set(allocated.slice(0, 4));
 
   const bays: Record<string, ParkingBay> = {};
   for (const id of ids) {

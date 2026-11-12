@@ -22,35 +22,35 @@ function OwnerBanner() {
     <Paper radius="md" p="lg" className="sp-banner">
       <Group justify="space-between" align="flex-start" gap="lg">
         <div>
-          <Text size="xs" tt="uppercase" fw={700} c="teal.2">
-            Your reserved bay · Level B5
+          <Text size="xs" tt="uppercase" fw={800} style={{ color: 'var(--sp-accent)' }}>
+            Your Reserved Bay · Level B5
           </Text>
           <Group gap="sm" mt={4}>
-            <Title order={2} c="white">
+            <Title order={2} style={{ color: 'var(--sp-text)' }}>
               {HERO_BAY}
             </Title>
             <Badge color={meta.color} variant="filled" size="lg">
               {meta.label}
             </Badge>
           </Group>
-          <Text size="sm" c="gray.3" mt={6}>
-            <IconRouter size={14} style={{ verticalAlign: -2 }} /> {bay.iotSensor.sensorId} • {bay.iotSensor.batteryPct}% battery • LoRaWAN link healthy
+          <Text size="sm" style={{ color: 'var(--sp-text-muted)' }} mt={6}>
+            <IconRouter size={14} style={{ verticalAlign: -2 }} /> {bay.iotSensor.sensorId} • {bay.iotSensor.batteryPct}% battery • LoRaWAN sensor active
           </Text>
           {bay.releaseInfo ? (
-            <Text size="sm" c="white" mt={6}>
-              Released {fmtDate(bay.releaseInfo.startDate)} to {fmtDate(bay.releaseInfo.endDate)} for {REASON_LABEL[bay.releaseInfo.reason].toLowerCase()}.
-              {bay.currentOccupant && bay.status === 'OCCUPIED_REALLOCATED' ? ` ${bay.currentOccupant.name} (${bay.currentOccupant.plate}) is using it now.` : ' Colleagues can park here.'}
+            <Text size="sm" style={{ color: 'var(--sp-text)' }} mt={6}>
+              Released from {fmtDate(bay.releaseInfo.startDate)} to {fmtDate(bay.releaseInfo.endDate)} ({REASON_LABEL[bay.releaseInfo.reason]}).
+              {bay.currentOccupant && bay.status === 'OCCUPIED_REALLOCATED' ? ` Currently used by ${bay.currentOccupant.name} (${bay.currentOccupant.plate}).` : ' Unlocked for colleagues.'}
             </Text>
           ) : (
-            <Text size="sm" c="white" mt={6}>
-              Away on travel, leave or working from home? Release your bay so a colleague can use it. It locks back to you automatically.
+            <Text size="sm" style={{ color: 'var(--sp-text)' }} mt={6}>
+              Travelling or working from home? Release your bay with one tap so colleagues can park. It will automatically reclaim when you return.
             </Text>
           )}
         </div>
         <Stack gap="xs" className="sp-banner__actions">
           {!bay.releaseInfo && (bay.status === 'RESERVED_LOCKED' || bay.status === 'OCCUPIED_OWNER') && (
-            <Button size="md" color="teal" leftSection={<IconLockOpen size={18} />} onClick={() => openRelease(HERO_BAY)} disabled={busy}>
-              Release bay {HERO_BAY}
+            <Button size="md" color="amber" leftSection={<IconLockOpen size={18} />} onClick={() => openRelease(HERO_BAY)} disabled={busy}>
+              Release Bay {HERO_BAY}
             </Button>
           )}
           {bay.releaseInfo && (
@@ -61,11 +61,11 @@ function OwnerBanner() {
               disabled={busy}
               onClick={() => void run(() => post<{ notification: string | null }>(`/api/parking/bays/${HERO_BAY}/reclaim`), (r) => r.notification ?? `${HERO_BAY} reclaimed and locked.`)}
             >
-              Reclaim bay {HERO_BAY}
+              Reclaim Bay {HERO_BAY}
             </Button>
           )}
-          <Button variant="white" color="dark" leftSection={<IconSearch size={16} />} onClick={() => selectBay(HERO_BAY)}>
-            Inspect bay and sensor
+          <Button variant="default" leftSection={<IconSearch size={16} />} onClick={() => selectBay(HERO_BAY)}>
+            Inspect Bay Telemetry
           </Button>
         </Stack>
       </Group>
@@ -87,7 +87,6 @@ function CommuterBanner() {
   const allRanked = useParkingStore((s) => s.freeRanking);
   const mine = useMemo(() => Object.values(bays).find((b) => b.currentOccupant?.email === me.email), [bays, me.email]);
   // Suggest from the level shown on the map, so the banner and the map always agree
-  // (B4-025 and B5-025 are different bays). Fall back to the other level only when this one is full.
   const { ranking, onThisLevel, otherBest } = useMemo(() => {
     const here = allRanked.filter((r) => r.level === level);
     return { ranking: here.length ? here : allRanked, onThisLevel: here.length > 0, otherBest: here.length ? allRanked.find((r) => r.level !== level) : undefined };
@@ -98,35 +97,35 @@ function CommuterBanner() {
     <Paper radius="md" p="lg" className="sp-banner">
       <Group justify="space-between" align="flex-start" gap="lg">
         <div>
-          <Text size="xs" tt="uppercase" fw={700} c="teal.2">
-            Today's unlocked bays · first come, first served
+          <Text size="xs" tt="uppercase" fw={800} style={{ color: 'var(--sp-accent)' }}>
+            Available Bays · First-Come, First-Served
           </Text>
           <Group gap="sm" align="baseline" mt={4}>
-            <Title order={2} c="white" className="sp-big">
+            <Title order={2} style={{ color: 'var(--sp-text)' }} className="sp-big">
               {summary?.availableNow ?? 0}
             </Title>
-            <Text c="gray.3" size="sm">
-              bays free now · {summary?.releasedAvailable ?? 0} released reserved bays + {summary?.flexAvailable ?? 0} open bays
+            <Text style={{ color: 'var(--sp-text-muted)' }} size="sm">
+              bays free right now · {summary?.releasedAvailable ?? 0} released reserved bays + {summary?.flexAvailable ?? 0} open bays
             </Text>
           </Group>
           {mine ? (
-            <Text size="sm" c="white" mt={6}>
-              You are parked in <strong>{mine.id}</strong> since {fmtTime(mine.currentOccupant!.parkedAt)}. When you drive out, the floor sensor checks you out automatically.
+            <Text size="sm" style={{ color: 'var(--sp-text)' }} mt={6}>
+              You are parked in <strong>{mine.id}</strong> since {fmtTime(mine.currentOccupant!.parkedAt)}. The floor sensor will auto-checkout when you leave.
             </Text>
           ) : recommended ? (
-            <Text size="sm" c="white" mt={6}>
-              {onThisLevel ? `Nearest free bay to the lift on Level ${level}: ` : `Level ${level} is full. The nearest free bay is on Level ${recommended.level}: `}
-              <strong>{recommended.id}</strong> ({recommended.liftDistanceM} m walk)
-              {recommended.status === 'RELEASED_AVAILABLE' ? ` — unlocked reserved bay on Level ${recommended.level}, released by ${recommended.ownerName} until ${fmtDate(recommended.releaseInfo!.endDate)}.` : ` — open bay on Level ${recommended.level}.`}
+            <Text size="sm" style={{ color: 'var(--sp-text)' }} mt={6}>
+              {onThisLevel ? `Nearest free bay to lift on Level ${level}: ` : `Level ${level} is full. Nearest free bay on Level ${recommended.level}: `}
+              <strong>{recommended.id}</strong> ({recommended.liftDistanceM}m walk)
+              {recommended.status === 'RELEASED_AVAILABLE' ? ` — shared by ${recommended.ownerName} until ${fmtDate(recommended.releaseInfo!.endDate)}.` : ` — open bay.`}
             </Text>
           ) : (
-            <Text size="sm" c="white" mt={6}>
-              No bays are free right now. This page updates the moment one is released or vacated.
+            <Text size="sm" style={{ color: 'var(--sp-text)' }} mt={6}>
+              No bays are free right now. Updates automatically when any bay is released or vacated.
             </Text>
           )}
           {!mine && (ranking.length > 1 || otherBest) && (
             <Group gap={6} mt={10} align="center">
-              <Text size="xs" c="teal.2" fw={700} tt="uppercase">
+              <Text size="xs" style={{ color: 'var(--sp-accent)' }} fw={800} tt="uppercase">
                 Next nearest
               </Text>
               {ranking.slice(1, 5).map((r, i) => (
@@ -139,12 +138,12 @@ function CommuterBanner() {
                     selectBay(r.bayId);
                   }}
                 >
-                  #{i + 2} {r.bayId} · {r.liftDistanceM} m
+                  #{i + 2} {r.bayId} · {r.liftDistanceM}m
                 </button>
               ))}
               {otherBest && (
                 <button type="button" className="sp-rank sp-rank--alt" onClick={() => setLevel(otherBest.level)}>
-                  Other level: {otherBest.bayId} · {otherBest.liftDistanceM} m
+                  Level {otherBest.level}: {otherBest.bayId} · {otherBest.liftDistanceM}m
                 </button>
               )}
             </Group>
@@ -152,20 +151,19 @@ function CommuterBanner() {
         </div>
         <Stack gap="xs" className="sp-banner__actions">
           {mine ? (
-            <Button size="md" color="gray.1" c="dark" leftSection={<IconCarOff size={18} />} disabled={busy} onClick={() => void run(() => post(`/api/parking/bays/${mine.id}/iot-event`, { type: 'VEHICLE_DEPARTED' }), `${mine.id} auto-cleared. No checkout needed.`)}>
-              Simulate driving out of {mine.id}
+            <Button size="md" color="amber" variant="light" leftSection={<IconCarOff size={18} />} disabled={busy} onClick={() => void run(() => post(`/api/parking/bays/${mine.id}/iot-event`, { type: 'VEHICLE_DEPARTED' }), `${mine.id} auto-cleared. No checkout needed.`)}>
+              Simulate Driving Out ({mine.id})
             </Button>
           ) : (
             recommended && (
-              <Button size="md" color="teal" leftSection={<IconLink size={18} />} disabled={busy} onClick={() => void run(() => post(`/api/parking/bays/${recommended.id}/iot-event`, { type: 'LINK_IDENTITY', authMethod: 'ACCESS_CARD_NFC' }), `You are linked to ${recommended.id}. Plate ${me.plate}.`)}>
-                Link my access card / QR / BLE to {recommended.id}
+              <Button size="md" color="amber" leftSection={<IconLink size={18} />} disabled={busy} onClick={() => void run(() => post(`/api/parking/bays/${recommended.id}/iot-event`, { type: 'LINK_IDENTITY', authMethod: 'ACCESS_CARD_NFC' }), `Linked to ${recommended.id} with plate ${me.plate}.`)}>
+                Park at {recommended.id} (Tap Card)
               </Button>
             )
           )}
           {(mine ?? recommended) && (
             <Button
-              variant="white"
-              color="dark"
+              variant="default"
               leftSection={<IconSearch size={16} />}
               onClick={() => {
                 const b = (mine ?? recommended)!;
@@ -173,7 +171,7 @@ function CommuterBanner() {
                 selectBay(b.id);
               }}
             >
-              Show {(mine ?? recommended)!.id} details
+              View {(mine ?? recommended)!.id} Details
             </Button>
           )}
         </Stack>
@@ -189,18 +187,18 @@ function ManagementBanner() {
     <Paper radius="md" p="lg" className="sp-banner">
       <Group justify="space-between" gap="lg">
         <div>
-          <Text size="xs" tt="uppercase" fw={700} c="teal.2">
-            Facilities & Workplace Planning
+          <Text size="xs" tt="uppercase" fw={800} style={{ color: 'var(--sp-accent)' }}>
+            Workplace Capacity & Facilities
           </Text>
-          <Title order={2} c="white" size="h3" mt={4}>
-            {summary?.unusedAllocated ?? 0} reserved bays are sitting empty right now
+          <Title order={2} style={{ color: 'var(--sp-text)' }} size="h3" mt={4}>
+            {summary?.unusedAllocated ?? 0} reserved bays are currently empty and locked
           </Title>
-          <Text size="sm" c="gray.3" mt={4}>
-            Click any bay to release it on an owner's behalf, or to simulate sensor events.
+          <Text size="sm" style={{ color: 'var(--sp-text-muted)' }} mt={4}>
+            Inspect real-time sensor occupancy, release bays on owners' behalf, or review cost savings in ParkIQ.
           </Text>
         </div>
-        <Button size="md" color="teal" leftSection={<IconChartBar size={18} />} onClick={() => setView('parkiq')}>
-          Open ParkIQ dashboard
+        <Button size="md" color="amber" leftSection={<IconChartBar size={18} />} onClick={() => setView('parkiq')}>
+          View ParkIQ Analytics
         </Button>
       </Group>
     </Paper>
@@ -230,11 +228,13 @@ export function SmartParkPortalView() {
   const b5 = useParkingStore((s) => s.summary?.levels.B5.available ?? 0);
   const [mode, setMode] = useState<'map' | 'photo'>('map');
 
+  const hasSidebar = persona === 'owner' || persona === 'management';
+
   return (
     <Stack gap="md">
       {persona === 'owner' ? <OwnerBanner /> : persona === 'commuter' ? <CommuterBanner /> : <ManagementBanner />}
       <Grid gap="md">
-        <Grid.Col span={{ base: 12, lg: 8.5 }}>
+        <Grid.Col span={{ base: 12, lg: hasSidebar ? 8.5 : 12 }}>
           <Paper withBorder p="md" radius="md">
             <Group justify="space-between" mb="sm" gap="sm">
               <Title order={3} size="h5">
@@ -276,12 +276,14 @@ export function SmartParkPortalView() {
             )}
           </Paper>
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 3.5 }}>
-          <Stack gap="md">
-            {persona === 'owner' && <CalendarCard />}
-            <ActivityFeed />
-          </Stack>
-        </Grid.Col>
+        {hasSidebar && (
+          <Grid.Col span={{ base: 12, lg: 3.5 }}>
+            <Stack gap="md">
+              {persona === 'owner' && <CalendarCard />}
+              {persona === 'management' && <ActivityFeed />}
+            </Stack>
+          </Grid.Col>
+        )}
       </Grid>
     </Stack>
   );

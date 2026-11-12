@@ -46,7 +46,7 @@ export function CalendarPrompt() {
       size={460}
       title={
         <Group gap="sm" wrap="nowrap">
-          <ThemeIcon color="teal" variant="light" size={38} radius="md">
+          <ThemeIcon color="amber" variant="light" size={38} radius="md">
             <IconCalendarEvent size={22} />
           </ThemeIcon>
           <Text fw={800} size="lg">
@@ -57,17 +57,17 @@ export function CalendarPrompt() {
     >
       {s && (
         <Stack gap="md">
-          <Paper withBorder p="sm" radius="md" bg="gray.0">
-            <Text fw={700}>{s.title}</Text>
+          <Paper withBorder p="sm" radius="md" style={{ background: 'var(--sp-surface)', borderColor: 'var(--sp-border)' }}>
+            <Text fw={700} style={{ color: 'var(--sp-text)' }}>{s.title}</Text>
             <Text size="sm" c="dimmed">
               {range(s.startDate, s.endDate)} · {s.days} day{s.days === 1 ? '' : 's'} · {REASON_LABEL[s.reason]}
             </Text>
           </Paper>
-          <Text>
+          <Text style={{ color: 'var(--sp-text)' }}>
             You won't need bay <strong>{s.bayId}</strong> on those days. Release it so a colleague can park there? It locks back to you automatically afterwards, and you can reclaim it early.
           </Text>
           <Stack gap="xs">
-            <Button size="md" color="teal" leftSection={<IconLockOpen size={18} />} disabled={busy} onClick={() => void answer(s, true)}>
+            <Button size="md" color="amber" leftSection={<IconLockOpen size={18} />} disabled={busy} onClick={() => void answer(s, true)}>
               Yes, release {s.bayId} for {s.days} day{s.days === 1 ? '' : 's'}
             </Button>
             <Button size="md" variant="default" disabled={busy} onClick={() => void answer(s, false)}>

@@ -16,16 +16,26 @@ const ROW_C = range(19, 26);
 const ROW_D = range(27, 35);
 const bayId = (level: Level, n: number) => `${level}-${String(n).padStart(3, '0')}`;
 
-const LEGEND: Visual[] = ['RELEASED_AVAILABLE', 'FLEX_AVAILABLE', 'RESERVED_LOCKED', 'OCCUPIED_OWNER', 'OCCUPIED_REALLOCATED', 'OCCUPIED_FLEX', 'PENDING', 'UNAUTHORIZED_ALERT'];
+interface SimpleLegendItem {
+  color: string;
+  label: string;
+}
+
+const SIMPLIFIED_LEGEND: SimpleLegendItem[] = [
+  { color: '#10b981', label: 'Available (Free to Park)' },
+  { color: '#2563eb', label: 'Your Parked Car' },
+  { color: '#64748b', label: 'Occupied / Reserved' },
+  { color: '#f59e0b', label: 'Verifying / Alert' },
+];
 
 export const MapLegend = memo(function MapLegend() {
   return (
-    <Group gap="xs" mt="sm" aria-label="Map legend">
-      {LEGEND.map((v) => (
-        <Group key={v} gap={6} wrap="nowrap">
-          <span className="sp-swatch" style={{ background: STATUS_META[v].swatch }} />
-          <Text size="xs" c="dimmed">
-            {STATUS_META[v].label}
+    <Group gap="md" mt="sm" aria-label="Map legend">
+      {SIMPLIFIED_LEGEND.map((item) => (
+        <Group key={item.label} gap={6} wrap="nowrap">
+          <span className="sp-swatch" style={{ background: item.color }} />
+          <Text size="xs" fw={600} c="dimmed">
+            {item.label}
           </Text>
         </Group>
       ))}

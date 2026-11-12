@@ -11,7 +11,7 @@ export type BayAllocationStatus =
 export type IoTSensorState = 'EMPTY' | 'VEHICLE_DETECTED_PENDING_AUTH' | 'OCCUPIED_VERIFIED' | 'OCCUPIED_UNAUTHORIZED';
 export type ReleaseReason = 'BUSINESS_TRAVEL' | 'ANNUAL_LEAVE' | 'WORK_FROM_HOME' | 'SITE_VISIT';
 export type AuthMethod = 'BLE_AUTO' | 'ACCESS_CARD_NFC' | 'PILLAR_QR';
-export type PersonaKey = 'owner' | 'commuter' | 'management';
+export type PersonaKey = 'commuter' | 'owner' | 'management';
 export type Level = 'B4' | 'B5';
 
 export interface ParkingBay {
@@ -116,9 +116,9 @@ export interface Persona {
 }
 
 export const PERSONAS: Record<PersonaKey, Persona> = {
-  owner: { key: 'owner', email: 'alex.tan@smartpark.demo', name: 'Alex Tan', title: 'Project Director, Engineering', department: 'Engineering', plate: 'WXY 2024', short: 'Employee A · Bay owner' },
-  commuter: { key: 'commuter', email: 'sarah.lim@smartpark.demo', name: 'Sarah Lim', title: 'Senior Engineer, Digital & Infra', department: 'Digital', plate: 'VKL 8821', short: 'Employee B · Commuter' },
-  management: { key: 'management', email: 'facilities@smartpark.demo', name: 'Facilities & Workplace Planning', title: 'ParkIQ management view', department: 'Facilities', plate: null, short: 'Management · ParkIQ' },
+  commuter: { key: 'commuter', email: 'sarah.lim@smartpark.demo', name: 'Sarah Lim', title: 'Senior Engineer, Digital & Infra', department: 'Digital', plate: 'VKL 8821', short: 'Commuter' },
+  owner: { key: 'owner', email: 'alex.tan@smartpark.demo', name: 'Alex Tan', title: 'Project Director, Engineering', department: 'Engineering', plate: 'WXY 2024', short: 'Bay Owner' },
+  management: { key: 'management', email: 'facilities@smartpark.demo', name: 'Facilities Management', title: 'ParkIQ Management & Admin', department: 'Facilities', plate: null, short: 'Admin' },
 };
 
 export const HERO_BAY = 'B5-024';

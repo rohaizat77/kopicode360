@@ -20,6 +20,15 @@ export function App() {
   const setView = useParkingStore((s) => s.setView);
   const busy = useParkingStore((s) => s.busy);
   const post = useParkingStore((s) => s.post);
+  const persona = useParkingStore((s) => s.activePersona);
+  const isAdmin = persona === 'management';
+
+  // If switched away from admin while viewing ParkIQ, return to portal
+  useEffect(() => {
+    if (!isAdmin && view === 'parkiq') {
+      setView('portal');
+    }
+  }, [isAdmin, view, setView]);
 
   // Polling stands in for a Firestore realtime listener. Unchanged polls return a few bytes.
   useEffect(() => {
@@ -42,7 +51,7 @@ export function App() {
       <Container size={1480} px={{ base: 'md', sm: 'lg' }} py="md" component="main">
         {initialized === null ? (
           <Stack align="center" py={80}>
-            {offline ? <Text c="red">Cannot reach the SmartPark server. Retrying…</Text> : <Loader color="teal" />}
+            {offline ? <Text c="red">Cannot reach the SmartPark server. Retrying…</Text> : <Loader color="amber" />}
           </Stack>
         ) : !initialized ? (
           <Paper withBorder radius="md" p="xl" maw={520} mx="auto" mt={60} ta="center">
@@ -50,9 +59,9 @@ export function App() {
               No demo data yet
             </Title>
             <Text c="dimmed" mt="xs" mb="lg">
-              Load the hackathon baseline: 70 bays across Levels B4 and B5, 13 unused allocated bays, and hero bay B5-024 ready for the live demo.
+              Load the baseline: 70 bays across Levels B4 and B5, 13 unused allocated bays, and hero bay B5-024 ready for demo.
             </Text>
-            <Button size="md" color="teal" loading={busy} leftSection={<IconDatabaseImport size={18} />} onClick={() => void run(() => post('/api/parking/demo/reset', {}, 'management'), 'Demo dataset initialised.')}>
+            <Button size="md" color="amber" loading={busy} leftSection={<IconDatabaseImport size={18} />} onClick={() => void run(() => post('/api/parking/demo/reset', {}, 'management'), 'Demo dataset initialised.')}>
               Initialize 70-Bay Demo Dataset
             </Button>
           </Paper>
@@ -62,9 +71,11 @@ export function App() {
               <Tabs.Tab value="portal" leftSection={<IconMap2 size={16} />}>
                 SmartBay Portal
               </Tabs.Tab>
-              <Tabs.Tab value="parkiq" leftSection={<IconChartBar size={16} />}>
-                ParkIQ
-              </Tabs.Tab>
+              {isAdmin && (
+                <Tabs.Tab value="parkiq" leftSection={<IconChartBar size={16} />}>
+                  ParkIQ (Admin)
+                </Tabs.Tab>
+              )}
               <Tabs.Tab value="odin" leftSection={<IconMessageChatbot size={16} />}>
                 Odin AI
               </Tabs.Tab>
@@ -72,9 +83,11 @@ export function App() {
             <Tabs.Panel value="portal">
               <SmartParkPortalView />
             </Tabs.Panel>
-            <Tabs.Panel value="parkiq">
-              <ParkIqDashboardView />
-            </Tabs.Panel>
+            {isAdmin && (
+              <Tabs.Panel value="parkiq">
+                <ParkIqDashboardView />
+              </Tabs.Panel>
+            )}
             <Tabs.Panel value="odin">
               <OdinPanel />
             </Tabs.Panel>

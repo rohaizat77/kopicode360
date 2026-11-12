@@ -1,140 +1,126 @@
-import { Badge, Button, Group, Select, Text } from '@mantine/core';
-import { IconCalendarEvent, IconCarGarage, IconCarOff, IconLink, IconLockOpen, IconParking, IconRefresh } from '@tabler/icons-react';
-import { memo, useState } from 'react';
-import { AUTH_LABEL, run, STATUS_META, visualOf } from '../lib/status';
-import { useParkingStore } from '../store/useParkingStore';
-import { HERO_BAY, PERSONAS, type AuthMethod, type PersonaKey } from '../types';
-
-const HERO = `/api/parking/bays/${HERO_BAY}`;
+import { Badge, Button, Group, SegmentedControl, Select, Text, Tooltip } from '@mantine/core';
+import {
+  IconCoffee,
+  IconCup,
+  IconParking,
+  IconRefresh,
+  IconUser,
+} from '@tabler/icons-react';
+import { memo } from 'react';
+import { run } from '../lib/status';
+import { useParkingStore, type ThemeMode } from '../store/useParkingStore';
+import { PERSONAS, type PersonaKey } from '../types';
 
 export const DemoControlBar = memo(function DemoControlBar() {
+  const themeMode = useParkingStore((s) => s.themeMode);
+  const setThemeMode = useParkingStore((s) => s.setThemeMode);
   const persona = useParkingStore((s) => s.activePersona);
   const setPersona = useParkingStore((s) => s.setPersona);
-  const setLevel = useParkingStore((s) => s.setLevel);
-  const setView = useParkingStore((s) => s.setView);
-  const hero = useParkingStore((s) => s.bays[HERO_BAY]);
   const initialized = useParkingStore((s) => s.initialized);
   const busy = useParkingStore((s) => s.busy);
   const offline = useParkingStore((s) => s.offline);
   const post = useParkingStore((s) => s.post);
-  const [method, setMethod] = useState<AuthMethod>('ACCESS_CARD_NFC');
-
-  // Which simulator step makes sense next, so the presenter can just follow the highlight.
-  const next = !hero
-    ? 0
-    : hero.iotSensor.state === 'VEHICLE_DETECTED_PENDING_AUTH'
-      ? 3
-      : hero.status === 'OCCUPIED_REALLOCATED'
-        ? 4
-        : hero.status === 'RELEASED_AVAILABLE'
-          ? 2
-          : hero.status === 'RESERVED_LOCKED' && !hero.releaseInfo
-            ? 1
-            : 0;
-
-  const step = (as: PersonaKey, action: () => Promise<unknown>, ok: string) => {
-    setPersona(as);
-    setView('portal');
-    setLevel('B5');
-    void run(action, ok);
-  };
 
   const reset = () => {
-    if (initialized && !window.confirm('Reset the demo? All 70 bays go back to the baseline scenario for everyone viewing this site.')) return;
-    void run(() => post('/api/parking/demo/reset', {}, 'management'), 'Demo scenario reset: 70 bays, 13 unused allocated bays, B5-024 ready.');
+    if (initialized && !window.confirm('Reset demo data back to the clean baseline?')) return;
+    void run(() => post('/api/parking/demo/reset', {}, 'management'), 'Demo reset: 70 bays restored, B5-024 ready.');
   };
-
-  const meta = hero ? STATUS_META[visualOf(hero)] : null;
-  const disabled = busy || !initialized;
 
   return (
     <header className="sp-bar">
       <div className="sp-bar__row sp-bar__row--brand">
         <Group gap="sm" wrap="nowrap">
           <span className="sp-logo" aria-hidden>
-            <IconParking size={22} />
+            <IconParking size={20} />
           </span>
           <div>
-            <Text fw={800} size="lg" lh={1.1} c="white">
-              SmartPark
-            </Text>
-            <Text size="xs" c="teal.2" lh={1.2}>
-              Unlock Hidden Parking Capacity
+            <Group gap="xs" align="center">
+              <Text fw={800} size="md" lh={1.1} className="sp-brand-title">
+                SmartPark
+              </Text>
+              <Badge size="xs" variant="outline" className="sp-brand-badge">
+                KopiCode 360
+              </Badge>
+            </Group>
+            <Text size="xs" className="sp-brand-sub" lh={1.2}>
+              Autonomous Frictionless Bay Allocation
             </Text>
           </div>
         </Group>
-        <Group gap="xs" wrap="nowrap">
+
+        <Group gap="sm" wrap="wrap" justify="flex-end">
           {offline && (
-            <Badge color="red" variant="filled">
-              Offline · retrying
+            <Badge color="red" variant="filled" size="sm">
+              Server Reconnecting…
             </Badge>
           )}
+
+          {/* Theme Toggle Button: Kopi O (Dark) / Teh Susu (Light) */}
+          <div className="sp-theme-switch-wrap" title="Toggle App Theme: Kopi O (Dark) or Teh Susu (Light)">
+            <SegmentedControl
+              size="xs"
+              radius="xl"
+              value={themeMode}
+              onChange={(val) => setThemeMode(val as ThemeMode)}
+              data={[
+                {
+                  value: 'kopi-o',
+                  label: (
+                    <Group gap={4} wrap="nowrap" px={2}>
+                      <IconCoffee size={13} />
+                      <Text size="xs" fw={700}>
+                        Kopi O
+                      </Text>
+                    </Group>
+                  ),
+                },
+                {
+                  value: 'teh-susu',
+                  label: (
+                    <Group gap={4} wrap="nowrap" px={2}>
+                      <IconCup size={13} />
+                      <Text size="xs" fw={700}>
+                        Teh Susu
+                      </Text>
+                    </Group>
+                  ),
+                },
+              ]}
+              className="sp-theme-toggle"
+            />
+          </div>
+
+          {/* Persona Switcher */}
           <Select
             aria-label="Active demo persona"
-            data={(Object.keys(PERSONAS) as PersonaKey[]).map((k) => ({ value: k, label: `${PERSONAS[k].short} — ${PERSONAS[k].name}` }))}
+            size="xs"
+            leftSection={<IconUser size={13} />}
+            data={(Object.keys(PERSONAS) as PersonaKey[]).map((k) => ({
+              value: k,
+              label: `${PERSONAS[k].name} (${PERSONAS[k].short})`,
+            }))}
             value={persona}
             onChange={(v) => v && setPersona(v as PersonaKey)}
             allowDeselect={false}
-            w={{ base: 210, sm: 330 }}
+            w={{ base: '100%', sm: 240 }}
             comboboxProps={{ withinPortal: true }}
+            className="sp-persona-select"
           />
-        </Group>
-      </div>
 
-      <div className="sp-bar__row sp-bar__row--sim">
-        <Group gap={8} wrap="nowrap" className="sp-bar__hero">
-          <Text size="xs" fw={700} c="gray.4" tt="uppercase">
-            IoT simulator · bay {HERO_BAY}
-          </Text>
-          {meta && (
-            <Badge color={meta.color} variant="filled" size="sm">
-              {meta.label}
-            </Badge>
-          )}
-        </Group>
-        <div className="sp-bar__steps">
-          <Button
-            size="xs"
-            variant="default"
-            disabled={disabled}
-            leftSection={<IconCalendarEvent size={14} />}
-            title="Simulates Alex adding a 3-day out-of-office entry to Google Calendar (demo data)"
-            onClick={() => step('owner', () => post('/api/calendar/events', { kind: 'BUSINESS_TRAVEL', durationDays: 3, title: 'Out of office: business trip' }, 'owner'), '')}
-          >
-            Calendar: away 3 days
-          </Button>
-          <Button size="xs" color="teal" variant={next === 1 ? 'filled' : 'default'} disabled={disabled} leftSection={<IconLockOpen size={14} />} onClick={() => step('owner', () => post(`${HERO}/release`, { durationDays: 3, reason: 'BUSINESS_TRAVEL' }, 'owner'), 'Alex released B5-024 for 3 days (business travel).')}>
-            1. Owner releases
-          </Button>
-          <Button size="xs" color="teal" variant={next === 2 ? 'filled' : 'default'} disabled={disabled} leftSection={<IconCarGarage size={14} />} onClick={() => step('commuter', () => post(`${HERO}/iot-event`, { type: 'VEHICLE_ARRIVED' }, 'commuter'), 'Floor puck detected a vehicle on B5-024.')}>
-            2. Car pulls in
-          </Button>
-          <Group gap={4} wrap="nowrap">
-            <Button size="xs" color="teal" variant={next === 3 ? 'filled' : 'default'} disabled={disabled} leftSection={<IconLink size={14} />} onClick={() => step('commuter', () => post(`${HERO}/iot-event`, { type: 'LINK_IDENTITY', authMethod: method }, 'commuter'), `Sarah linked to B5-024 via ${AUTH_LABEL[method]}.`)}>
-              3. Link ID
-            </Button>
-            <Select
-              aria-label="Identity link method for step 3"
+          {/* Reset Action */}
+          <Tooltip label="Reset all 70 bays back to baseline" position="bottom" withArrow>
+            <Button
               size="xs"
-              w={96}
-              data={[
-                { value: 'ACCESS_CARD_NFC', label: 'Card' },
-                { value: 'PILLAR_QR', label: 'QR' },
-                { value: 'BLE_AUTO', label: 'BLE' },
-              ]}
-              value={method}
-              onChange={(v) => v && setMethod(v as AuthMethod)}
-              allowDeselect={false}
-              comboboxProps={{ withinPortal: true }}
-            />
-          </Group>
-          <Button size="xs" color="teal" variant={next === 4 ? 'filled' : 'default'} disabled={disabled} leftSection={<IconCarOff size={14} />} onClick={() => step('commuter', () => post(`${HERO}/iot-event`, { type: 'VEHICLE_DEPARTED' }, 'commuter'), 'Car left. B5-024 auto-cleared with zero clicks.')}>
-            4. Car leaves
-          </Button>
-          <Button size="xs" variant="subtle" color="gray.3" disabled={busy} leftSection={<IconRefresh size={14} />} onClick={reset}>
-            Reset demo (70 bays)
-          </Button>
-        </div>
+              variant="subtle"
+              className="sp-reset-btn"
+              disabled={busy}
+              leftSection={<IconRefresh size={13} />}
+              onClick={reset}
+            >
+              Reset Demo
+            </Button>
+          </Tooltip>
+        </Group>
       </div>
     </header>
   );
