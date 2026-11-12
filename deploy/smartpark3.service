@@ -1,0 +1,33 @@
+[Unit]
+Description=SmartPark NestJS (work3.rohaizat.cloud) - KopiCode hackathon app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=smartpark3
+Group=smartpark3
+WorkingDirectory=/opt/smartpark3
+Environment=NODE_ENV=production
+Environment=PORT=3600
+Environment=HOST=127.0.0.1
+Environment=DATA_DIR=/opt/smartpark3/data
+Environment=CLIENT_DIST=/opt/smartpark3/client/dist
+ExecStart=/usr/bin/node /opt/smartpark3/functions/dist/main.js
+Restart=always
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/smartpark3/data
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
